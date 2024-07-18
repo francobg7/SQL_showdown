@@ -36,14 +36,22 @@ where UserId IN (select UserId from Users where Reputation < 100);
 DECLARE @DeletedCommentsCount INT; DELETE FROM Comments WHERE UserId IN (SELECT UserId FROM Users WHERE Reputation < 100) SET @DeletedCommentsCount = @@ROWCOUNT; PRINT CAST(@DeletedCommentsCount AS VARCHAR(10)) + ' comentarios fueron eliminados.';
 
 /*consulta 7*/
-SELECT TOP 200
+SELECT 
     Users.DisplayName,
-    (SELECT COUNT(*) FROM Posts WHERE OwnerUserId = Users.Id) AS TotalPosts,
-    (SELECT COUNT(*) FROM Comments WHERE UserId = Users.Id) AS TotalComments,
-    (SELECT COUNT(*) FROM Badges WHERE UserId = Users.Id) AS TotalBadges
-from Users 
-order by TotalPosts desc, Users.DisplayName;
-
+    COALESCE(PostCounts.TotalPosts, 0) AS TotalPosts,
+    COALESCE(CommentCounts.TotalComments, 0) AS TotalComments,
+    COALESCE(BadgeCounts.TotalBadges, 0) AS TotalBadges
+FROM 
+    Users
+LEFT JOIN 
+    (SELECT OwnerUserId, COUNT(*) AS TotalPosts FROM Posts GROUP BY OwnerUserId) AS PostCounts
+    ON Users.Id = PostCounts.OwnerUserId
+LEFT JOIN 
+    (SELECT UserId, COUNT(*) AS TotalComments FROM Comments GROUP BY UserId) AS CommentCounts
+    ON Users.Id = CommentCounts.UserId
+LEFT JOIN 
+    (SELECT UserId, COUNT(*) AS TotalBadges FROM Badges GROUP BY UserId) AS BadgeCounts
+    ON Users.Id = BadgeCounts.UserId;
 
 /*consulta 8*/
 SELECT TOP 10 Title, Score
